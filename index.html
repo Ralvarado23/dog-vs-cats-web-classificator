@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clasificador Perro vs Gato</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <meta name="description" content="Clasificador de imágenes de perros y gatos usando Inteligencia Artificial">
+  <meta name="keywords" content="IA, clasificación de imágenes, perros, gatos, machine learning">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" as="script">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* Ajusta el contenedor principal para incluir todo el contenido */
+    .main-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Contenedor principal con altura dinámica */
+    .content {
+      --upload-height: 300px; /* Altura base del selector */
+      --content-padding: 40px;
+      padding: var(--content-padding);
+      min-height: calc(var(--upload-height) + var(--content-padding) * 2);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* Estado compacto del modelo */
+    .model-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .model-status.loading {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .model-status.ready {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .model-status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.loading {
+      background: #667eea;
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-dot.ready {
+      background: #4CAF50;
+      animation: successPop 0.6s ease-out;
+    }
+
+    .status-dot.error {
+      background: #f44336;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.1); }
+    }
+
+    @keyframes successPop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    /* Área de carga - pantalla completa cuando no hay imagen */
+    .upload-section {
+      text-align: center;
+      max-height: 1000px; /* Altura máxima arbitraria */
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Reducido de 0.6s a 0.3s */
+    }
+
+    .upload-section.hiding {
+      max-height: 0;
+      padding: 0;
+      margin: 0;
+      opacity: 0;
+    }
+
+    /* Área de carga con altura base */
+    .upload-area {
+      border: 3px dashed #667eea;
+      border-radius: 15px;
+      padding: 60px 40px;
+      min-height: var(--upload-height);
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(102, 126, 234, 0.05);
+      margin: 10px;
+      position: relative;
+      overflow: visible;
+    }
+
+    .upload-area::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .upload-area:hover {
+      border-color: #764ba2;
+      background: rgba(118, 75, 162, 0.1);
+      transform: translateY(-4px);
+      box-shadow: 0 10px 30px rgba(118, 75, 162, 0.2);
+    }
+
+    .upload-area:hover::before {
+      left: 100%;
+    }
+
+    .upload-area.dragover {
+      border-color: #4CAF50;
+      background: rgba(76, 175, 80, 0.15);
+      transform: scale(1.02) translateY(-4px);
+      box-shadow: 0 15px 40px rgba(76, 175, 80, 0.3);
+    }
+
+    .upload-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      opacity: 0.7;
+      display: inline-block;
+      transition: all 0.3s ease;
+    }
+
+    .upload-area:hover .upload-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+
+    .upload-text {
+      font-size: 1.3rem;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .upload-subtitle {
+      font-size: 1rem;
+      color: #666;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    /* Sección de imagen y resultados - centrada */
+    .prediction-section {
+      display: none;
+      transform: translateY(30px);
+      width: 100%;
+      flex-direction: column;
+    }
+
+    .prediction-section.show {
+      display: flex;
+    }
+
+    /* Contenedor de resultados con padding correcto */
+    .results-container {
+      display: none;
+      transform: translateY(30px);
+      width: 100%;
+      padding: 20px 0; /* Añade espacio vertical sin afectar los laterales */
+      flex-direction: column;
+      margin-bottom: 20px;
+      padding-bottom: 20px; /* Espacio extra para el mensaje */
+    }
+
+    .results-container.show {
+      display: flex;
+      animation: slideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .image-container {
+      margin-bottom: 30px;
+      text-align: center; /* Centra el contenido */
+      width: 100%;
+    }
+
+    .image-preview {
+      max-width: 400px;
+      max-height: 400px;
+      width: auto;
+      height: auto;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      border: 3px solid #e0e0e0;
+      transition: all 0.5s ease;
+      opacity: 0;
+      transform: scale(0.8);
+      display: inline-block; /* Permite que text-align: center funcione */
+    }
+
+    .image-preview.loaded {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .controls {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 40px; /* Este margen se eliminará cuando se muestre el resultado */
+      flex-wrap: wrap;
+      transition: margin-bottom 0.3s ease;
+    }
+
+    .controls.predicting {
+      margin-bottom: 0px;
+    }
+
+    .btn {
+      padding: 15px 30px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      color: white; /* Añadir color blanco al texto */
+    }
+
+    .btn::before {
+      display: none; /* Eliminamos el efecto del círculo */
+    }
+
+    .btn-predict {
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      transition: all 0.3s ease;
+    }
+
+    .btn-predict:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 35px rgba(39, 174, 96, 0.4);
+      background: linear-gradient(135deg, #219a52, #27ae60); /* Oscurece el gradiente en hover */
+    }
+
+    .btn-predict.predicting {
+      animation: predictingPulse 1.5s infinite;
+    }
+
+    @keyframes predictingPulse {
+      0%, 100% { 
+        transform: translateY(-3px) scale(1); 
+        box-shadow: 0 12px 35px rgba(39, 174, 96, 0.4);
+      }
+      50% { 
+        transform: translateY(-3px) scale(1.05); 
+        box-shadow: 0 15px 40px rgba(39, 174, 96, 0.6);
+      }
+    }
+
+    .btn-clear {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      transition: all 0.3s ease;
+    }
+
+    .btn-clear:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 35px rgba(231, 76, 60, 0.4);
+      background: linear-gradient(135deg, #d44637, #b0351e); /* Oscurece el gradiente en hover */
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+      color: white; /* Mantener el color blanco incluso cuando está deshabilitado */
+    }
+
+    /* Resultados de predicción */
+    .results-container {
+      display: none;
+      transform: translateY(30px);
+      width: 100%;
+      padding: 20px 0;
+      flex-direction: column;
+      margin-bottom: 20px;
+      padding-bottom: 20px; /* Espacio extra para el mensaje */
+    }
+
+    .results-container.show {
+      display: flex;
+      animation: slideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .results-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 25px;
+      text-align: center;
+      opacity: 0;
+      animation: fadeInTitle 0.6s ease-out 0.3s forwards;
+    }
+
+    @keyframes fadeInTitle {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .prediction-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .prediction-item {
+      text-align: center;
+      padding: 20px;
+      border-radius: 10px;
+      border: 2px solid #e0e0e0;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(20px) scale(0.9);
+    }
+
+    .prediction-item.animate-in {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .prediction-item.winner {
+      border-color: #3498db;
+      background: rgba(52, 152, 219, 0.05);
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(52, 152, 219, 0.2);
+    }
+
+    .prediction-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(52, 152, 219, 0.1), transparent);
+      transition: left 0.6s ease;
+    }
+
+    .prediction-item.winner::before {
+      left: 100%;
+    }
+
+    .animal-icon {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      display: block;
+      transition: all 0.3s ease;
+    }
+
+    .prediction-item.winner .animal-icon {
+      animation: celebrate 0.6s ease-out;
+    }
+
+    @keyframes celebrate {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      25% { transform: scale(1.2) rotate(-10deg); }
+      75% { transform: scale(1.2) rotate(10deg); }
+    }
+
+    .animal-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+
+    .probability {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #3498db;
+      transition: color 0.3s ease;
+    }
+
+    .prediction-item.winner .probability {
+      color: #27ae60;
+    }
+
+    /* Ajusta el mensaje de confianza */
+    .confidence-note {
+      font-size: 0.9rem;
+      color: #7f8c8d;
+      text-align: center;
+      margin-top: 15px;
+      font-style: italic;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.4s ease;
+      position: relative; /* Elimina cualquier posicionamiento absoluto */
+      width: 100%;
+      padding: 10px 20px;
+      margin: 15px 0 0 0;
+    }
+
+    .confidence-note.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .content {
+        --upload-height: 250px; /* Altura reducida para tablets */
+        --content-padding: 30px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .content {
+        --upload-height: 200px; /* Altura reducida para móviles */
+        --content-padding: 20px;
+      }
+
+      .main-container {
+        margin: 10px;
+        border-radius: 15px;
+      }
+
+      .header {
+        padding: 20px;
+      }
+
+      .header h1 {
+        font-size: 1.8rem;
+      }
+
+      .content {
+        padding: 15px;
+      }
+
+      .upload-area {
+        padding: 30px 15px;
+      }
+
+      .animal-icon {
+        font-size: 2.5rem;
+      }
+
+      .probability {
+        font-size: 1.5rem;
+      }
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Animación de progreso para los porcentajes */
+    @keyframes countUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .probability.counting {
+      animation: countUp 0.3s ease-out;
+    }
+
+    /* Efecto de partículas para el ganador */
+    .prediction-item.winner {
+      position: relative;
+    }
+
+    .prediction-item.winner::after {
+      content: '✨';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 1.2rem;
+      animation: sparkle 2s infinite;
+    }
+
+    @keyframes sparkle {
+      0%, 100% {
+        opacity: 0.3;
+        transform: scale(1) rotate(0deg);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.2) rotate(180deg);
+      }
+    }
+
+    /* Mejora del estado de loading del botón */
+    .btn-predict .loading-spinner {
+      border-color: rgba(255,255,255,0.3);
+      border-top-color: #ffffff;
+    }
+
+    /* Añadir @keyframes slideIn que falta */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="main-container">
+    <div class="header">
+      <h1>🐶 Clasificador Perro vs Gato 🐱</h1>
+      <p>Sube una imagen y el modelo la clasificará automáticamente</p>
+    </div>
+
+    <!-- Estado del modelo -->
+    <div class="model-status loading" id="modelStatus">
+      <div class="status-dot loading"></div>
+      <span id="statusText">Cargando modelo...</span>
+    </div>
+
+    <div class="content">
+      <!-- Sección de carga -->
+      <div class="upload-section" id="uploadSection">
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📸</div>
+          <div class="upload-text">Selecciona o arrastra una imagen</div>
+          <div class="upload-subtitle">Formatos: JPG, PNG, WebP</div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+
+      <!-- Sección de predicción -->
+      <div class="prediction-section" id="predictionSection">
+        <div class="image-container">
+          <img id="imagePreview" class="image-preview" alt="Imagen a clasificar">
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-clear" id="clearBtn">
+            <span>🗑️</span>
+            <span>Borrar</span>
+          </button>
+          <button class="btn btn-predict" id="predictBtn" disabled>
+            <span>🔮</span>
+            <span>Predecir</span>
+          </button>
+        </div>
+
+        <!-- Resultados -->
+        <div class="results-container" id="resultsContainer">
+          <div class="results-title">Resultados de la Predicción</div>
+          <div class="prediction-grid">
+            <div class="prediction-item" id="dogResult">
+              <span class="animal-icon">🐶</span>
+              <div class="animal-name">Perro</div>
+              <div class="probability" id="dogPercentage">0%</div>
+            </div>
+            <div class="prediction-item" id="catResult">
+              <span class="animal-icon">🐱</span>
+              <div class="animal-name">Gato</div>
+              <div class="probability" id="catPercentage">0%</div>
+            </div>
+          </div>
+          <div class="confidence-note" id="confidenceNote"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas oculto para procesamiento -->
+  <canvas id="workCanvas" style="display: none;"></canvas>
+
+  <script>
+    let model = null;
+    let currentImageBitmap = null;
+
+    const elements = {
+      modelStatus: document.getElementById('modelStatus'),
+      statusText: document.getElementById('statusText'),
+      uploadSection: document.getElementById('uploadSection'),
+      uploadArea: document.getElementById('uploadArea'),
+      fileInput: document.getElementById('fileInput'),
+      predictionSection: document.getElementById('predictionSection'),
+      imagePreview: document.getElementById('imagePreview'),
+      predictBtn: document.getElementById('predictBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      resultsContainer: document.getElementById('resultsContainer'),
+      dogResult: document.getElementById('dogResult'),
+      catResult: document.getElementById('catResult'),
+      dogPercentage: document.getElementById('dogPercentage'),
+      catPercentage: document.getElementById('catPercentage'),
+      confidenceNote: document.getElementById('confidenceNote'),
+      workCanvas: document.getElementById('workCanvas')
+    };
+
+    function setModelStatus(type, message) {
+      const dot = elements.modelStatus.querySelector('.status-dot');
+      elements.modelStatus.className = `model-status ${type}`;
+      dot.className = `status-dot ${type}`;
+      elements.statusText.textContent = message;
+    }
+
+    async function loadModel() {
+      try {
+        setModelStatus('loading', 'Cargando modelo...');
+
+        try {
+          model = await tf.loadLayersModel('modelo/model.json');
+        } catch {
+          model = await tf.loadGraphModel('modelo/model.json');
+        }
+
+        setModelStatus('ready', 'Modelo listo');
+        updatePredictButton();
+
+      } catch (error) {
+        console.error('Error cargando modelo:', error);
+        setModelStatus('error', 'Error al cargar modelo');
+      }
+    }
+
+    function updatePredictButton() {
+      elements.predictBtn.disabled = !(model && currentImageBitmap);
+    }
+
+    function getModelInputSize() {
+      try {
+        const shape = model?.inputs?.[0]?.shape;
+        const height = shape?.[1] || 120; // Cambiado de 180 a 120
+        const width = shape?.[2] || 120;  // Cambiado de 180 a 120
+        return { width, height };
+      } catch {
+        return { width: 120, height: 120 }; // Valores por defecto actualizados
+      }
+    }
+
+    async function preprocessImage(imageBitmap) {
+      const { width, height } = getModelInputSize();
+
+      elements.workCanvas.width = width;
+      elements.workCanvas.height = height;
+
+      const ctx = elements.workCanvas.getContext('2d');
+
+      // Calcular crop centrado cuadrado
+      const size = Math.min(imageBitmap.width, imageBitmap.height);
+      const offsetX = (imageBitmap.width - size) / 2;
+      const offsetY = (imageBitmap.height - size) / 2;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(imageBitmap, offsetX, offsetY, size, size, 0, 0, width, height);
+
+      return tf.tidy(() => {
+        const tensor = tf.browser.fromPixels(elements.workCanvas);
+        return tensor.toFloat().expandDims(0); // Sin división por 255
+      });
+    }
+
+    function interpretPrediction(output) {
+      const data = output.dataSync();
+      return data.length === 1 
+        ? { dogProb: data[0], catProb: 1 - data[0] }
+        : { catProb: data[0] || 0, dogProb: data[1] || 0 };
+    }
+
+    // Función para animar el conteo de porcentajes
+    function animatePercentage(element, targetValue, duration = 1500) {
+      let startValue = 0;
+      const increment = targetValue / (duration / 16); // 60fps aproximadamente
+      let currentValue = startValue;
+
+      const animate = () => {
+        currentValue += increment;
+        if (currentValue >= targetValue) {
+          currentValue = targetValue;
+          element.textContent = `${Math.round(currentValue)}%`;
+          element.classList.add('counting');
+          setTimeout(() => element.classList.remove('counting'), 300);
+          return;
+        }
+        element.textContent = `${Math.round(currentValue)}%`;
+        requestAnimationFrame(animate);
+      };
+
+      requestAnimationFrame(animate);
+    }
+
+    async function predict() {
+      if (!model || !currentImageBitmap) return;
+      
+      let inputTensor = null;
+      let prediction = null;
+      
+      try {
+        // Deshabilitar el botón y añadir clase a controls
+        const predictBtn = elements.predictBtn;
+        const controls = document.querySelector('.controls');
+        predictBtn.disabled = true;
+        controls.classList.add('predicting');
+
+        // Añadir estado de loading al botón
+        const originalContent = predictBtn.innerHTML;
+        predictBtn.innerHTML = '<div class="loading-spinner"></div><span>Analizando...</span>';
+        predictBtn.classList.add('predicting');
+        
+        elements.resultsContainer.classList.remove('show');
+
+        inputTensor = await preprocessImage(currentImageBitmap);
+
+        prediction = model.predict(inputTensor);
+        const output = Array.isArray(prediction) ? prediction[0] : prediction;
+
+        const { dogProb, catProb } = interpretPrediction(output);
+
+        // Calcular porcentajes
+        const dogPercent = Math.round(dogProb * 100);
+        const catPercent = Math.round(catProb * 100);
+
+        // Resetear estado visual
+        elements.dogResult.classList.remove('winner', 'animate-in');
+        elements.catResult.classList.remove('winner', 'animate-in');
+        elements.dogPercentage.textContent = '0%';
+        elements.catPercentage.textContent = '0%';
+        elements.confidenceNote.classList.remove('show');
+
+        // Mostrar contenedor con delay
+        setTimeout(() => {
+          elements.resultsContainer.classList.add('show');
+          
+          // Animar entrada de elementos
+          setTimeout(() => {
+            elements.dogResult.classList.add('animate-in');
+            elements.catResult.classList.add('animate-in');
+          }, 200);
+
+          // Animar porcentajes con delay escalonado
+          setTimeout(() => {
+            animatePercentage(elements.dogPercentage, dogPercent, 1200);
+          }, 600);
+
+          setTimeout(() => {
+            animatePercentage(elements.catPercentage, catPercent, 1200);
+          }, 800);
+
+          // Determinar y animar ganador
+          setTimeout(() => {
+            if (dogProb > catProb) {
+              elements.dogResult.classList.add('winner');
+            } else {
+              elements.catResult.classList.add('winner');
+            }
+
+            // Mostrar nota de confianza
+            const maxProb = Math.max(dogProb, catProb);
+            let confidenceText = '';
+            if (maxProb > 0.9) {
+              confidenceText = '🎯 Predicción muy confiable';
+            } else if (maxProb > 0.7) {
+              confidenceText = '✅ Predicción confiable';
+            } else if (maxProb > 0.6) {
+              confidenceText = '⚖️ Predicción moderada';
+            } else {
+              confidenceText = '❓ Predicción incierta - la imagen podría ser ambigua';
+            }
+            elements.confidenceNote.textContent = confidenceText;
+            
+            setTimeout(() => {
+              elements.confidenceNote.classList.add('show');
+            }, 200);
+
+          }, 1400);
+
+        }, 300);
+
+      } catch (error) {
+        console.error('Error en predicción:', error);
+        alert('Error realizando predicción: ' + error.message);
+        // En caso de error, mantener el botón deshabilitado
+      } finally {
+        // Restaurar apariencia del botón pero mantenerlo deshabilitado
+        setTimeout(() => {
+          predictBtn.innerHTML = originalContent;
+          predictBtn.classList.remove('predicting');
+        }, 1800);
+      }
+    }
+
+    function handleImageLoad(file) {
+      if (!file?.type.startsWith('image/')) {
+        alert('Por favor selecciona un archivo de imagen válido');
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = async () => {
+        try {
+          currentImageBitmap = await createImageBitmap(img);
+          
+          // Iniciar transición de salida de upload
+          elements.uploadSection.classList.add('hiding');
+          
+          // Configurar imagen
+          elements.imagePreview.src = url;
+          elements.imagePreview.classList.remove('loaded');
+          
+          // Después de que termine la transición de salida
+          setTimeout(() => {
+            elements.predictionSection.classList.add('show');
+            
+            // Animar entrada de imagen después de un pequeño delay
+            setTimeout(() => {
+              elements.imagePreview.classList.add('loaded');
+            }, 200);
+            
+            updatePredictButton();
+          }, 600);
+
+        } catch (error) {
+          console.error('Error procesando imagen:', error);
+          alert('No se pudo procesar la imagen');
+        }
+      };
+
+      img.onerror = () => {
+        alert('Error cargando imagen');
+        URL.revokeObjectURL(url);
+      };
+
+      img.src = url;
+    }
+
+    function clearImage() {
+      currentImageBitmap = null;
+      elements.imagePreview.src = '';
+      elements.fileInput.value = '';
+
+      // Animar salida de prediction section
+      elements.predictionSection.classList.remove('show');
+      elements.resultsContainer.classList.remove('show');
+      
+      // Reducido el tiempo de espera de 600ms a 300ms
+      setTimeout(() => {
+        elements.uploadSection.classList.remove('hiding');
+        
+        // Limpiar resultados
+        elements.dogResult.classList.remove('winner', 'animate-in');
+        elements.catResult.classList.remove('winner', 'animate-in');
+        elements.dogPercentage.textContent = '0%';
+        elements.catPercentage.textContent = '0%';
+        elements.confidenceNote.classList.remove('show');
+        elements.imagePreview.classList.remove('loaded');
+        
+        updatePredictButton();
+      }, 300); // Reducido de 600 a 300
+
+      // Restaurar el margen de controls
+      const controls = document.querySelector('.controls');
+      controls.classList.remove('predicting');
+    }
+
+    // Event listeners
+    elements.uploadArea.addEventListener('click', () => elements.fileInput.click());
+    elements.fileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleImageLoad(e.target.files[0]);
+    });
+
+    elements.uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      elements.uploadArea.classList.add('dragover');
+    });
+
+    elements.uploadArea.addEventListener('dragleave', () => {
+      elements.uploadArea.classList.remove('dragover');
+    });
+
+    elements.uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      elements.uploadArea.classList.remove('dragover');
+      const file = e.dataTransfer.files?.[0];
+      if (file) handleImageLoad(file);
+    });
+
+    elements.predictBtn.addEventListener('click', predict);
+    elements.clearBtn.addEventListener('click', clearImage);
+
+    // Inicializar
+    loadModel();
+  </script>
+</body>
+
+</html>
