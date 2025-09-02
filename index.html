@@ -4,12 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tags para SEO -->
+  <meta name="description" content="Clasificador de imágenes de perros y gatos usando Inteligencia Artificial">
+  <meta name="keywords" content="IA, clasificación de imágenes, perros, gatos, machine learning">
+
   <title>Clasificador Perro vs Gato</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-  <meta name="description" content="Clasificador de imágenes de perros y gatos usando Inteligencia Artificial">
-  <meta name="keywords" content="IA, clasificación de imágenes, perros, gatos, machine learning">
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" as="script">
   <style>
     * {
       margin: 0;
@@ -251,22 +253,6 @@
       display: flex;
     }
 
-    /* Contenedor de resultados con padding correcto */
-    .results-container {
-      display: none;
-      transform: translateY(30px);
-      width: 100%;
-      padding: 20px 0; /* Añade espacio vertical sin afectar los laterales */
-      flex-direction: column;
-      margin-bottom: 20px;
-      padding-bottom: 20px; /* Espacio extra para el mensaje */
-    }
-
-    .results-container.show {
-      display: flex;
-      animation: slideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
     .image-container {
       margin-bottom: 30px;
       text-align: center; /* Centra el contenido */
@@ -303,6 +289,7 @@
 
     .controls.predicting {
       margin-bottom: 0px;
+      transition: all 0.5s cubic-bezier(1, 0.02, 1, 0.02);
     }
 
     .btn {
@@ -621,7 +608,6 @@
       border-top-color: #ffffff;
     }
 
-    /* Añadir @keyframes slideIn que falta */
     @keyframes slideIn {
       from {
         opacity: 0;
@@ -756,11 +742,11 @@
     function getModelInputSize() {
       try {
         const shape = model?.inputs?.[0]?.shape;
-        const height = shape?.[1] || 120; // Cambiado de 180 a 120
-        const width = shape?.[2] || 120;  // Cambiado de 180 a 120
+        const height = shape?.[1] || 120;
+        const width = shape?.[2] || 120;
         return { width, height };
       } catch {
-        return { width: 120, height: 120 }; // Valores por defecto actualizados
+        return { width: 120, height: 120 };
       }
     }
 
@@ -782,15 +768,25 @@
 
       return tf.tidy(() => {
         const tensor = tf.browser.fromPixels(elements.workCanvas);
-        return tensor.toFloat().expandDims(0); // Sin división por 255
+        return tensor.toFloat().expandDims(0);
       });
     }
 
     function interpretPrediction(output) {
       const data = output.dataSync();
-      return data.length === 1 
-        ? { dogProb: data[0], catProb: 1 - data[0] }
-        : { catProb: data[0] || 0, dogProb: data[1] || 0 };
+
+      if (data.length === 1) {
+        // Salida binaria: 0=gato, 1=perro
+        const dogProb = data[0];
+        const catProb = 1 - dogProb;
+        return { dogProb, catProb };
+      } else if (data.length === 2) {
+        // Dos salidas: [gato, 1-perro]
+        return { catProb: data[0], dogProb: data[1] };
+      } else {
+        // Más salidas, asumir [gato, perro, ...]
+        return { catProb: data[0] || 0, dogProb: data[1] || 0 };
+      }
     }
 
     // Función para animar el conteo de porcentajes
@@ -817,27 +813,24 @@
 
     async function predict() {
       if (!model || !currentImageBitmap) return;
+
+      // Deshabilitar el botón y añadir clase a controls
+      const predictBtn = elements.predictBtn;
+      const controls = document.querySelector('.controls');
+      predictBtn.disabled = true;
+      controls.classList.add('predicting');
+
+      // Añadir estado de loading al botón
+      const originalContent = predictBtn.innerHTML;
+      predictBtn.innerHTML = '<div class="loading-spinner"></div><span>Analizando...</span>';
+      predictBtn.classList.add('predicting');
       
-      let inputTensor = null;
-      let prediction = null;
-      
+      elements.resultsContainer.classList.remove('show');
+
       try {
-        // Deshabilitar el botón y añadir clase a controls
-        const predictBtn = elements.predictBtn;
-        const controls = document.querySelector('.controls');
-        predictBtn.disabled = true;
-        controls.classList.add('predicting');
+        const inputTensor = await preprocessImage(currentImageBitmap);
 
-        // Añadir estado de loading al botón
-        const originalContent = predictBtn.innerHTML;
-        predictBtn.innerHTML = '<div class="loading-spinner"></div><span>Analizando...</span>';
-        predictBtn.classList.add('predicting');
-        
-        elements.resultsContainer.classList.remove('show');
-
-        inputTensor = await preprocessImage(currentImageBitmap);
-
-        prediction = model.predict(inputTensor);
+        let prediction = model.predict(inputTensor);
         const output = Array.isArray(prediction) ? prediction[0] : prediction;
 
         const { dogProb, catProb } = interpretPrediction(output);
@@ -901,6 +894,14 @@
           }, 1400);
 
         }, 300);
+
+        // Limpiar memoria
+        inputTensor.dispose();
+        if (Array.isArray(prediction)) {
+          prediction.forEach(p => p.dispose());
+        } else {
+          prediction.dispose();
+        }
 
       } catch (error) {
         console.error('Error en predicción:', error);
