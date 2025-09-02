@@ -13,6 +13,8 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
   <style>
+
+    /* Reset y estilos base */
     * {
       margin: 0;
       padding: 0;
@@ -26,7 +28,7 @@
       padding: 20px;
     }
 
-    /* Ajusta el contenedor principal para incluir todo el contenido */
+    /* Layout principal */
     .main-container {
       max-width: 800px;
       margin: 0 auto;
@@ -59,29 +61,7 @@
       animation: fadeInUp 0.8s ease-out 0.2s both;
     }
 
-    @keyframes fadeInDown {
-      from {
-        opacity: 0;
-        transform: translateY(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* Contenedor principal con altura dinámica */
+    /* Contenido principal */
     .content {
       --upload-height: 300px; /* Altura base del selector */
       --content-padding: 40px;
@@ -92,7 +72,7 @@
       flex: 1;
     }
 
-    /* Estado compacto del modelo */
+    /* Estado del modelo */
     .model-status {
       display: flex;
       align-items: center;
@@ -160,7 +140,7 @@
       text-align: center;
       max-height: 1000px; /* Altura máxima arbitraria */
       overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Reducido de 0.6s a 0.3s */
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .upload-section.hiding {
@@ -241,7 +221,7 @@
       display: none;
     }
 
-    /* Sección de imagen y resultados - centrada */
+    /* Sección de imagen y resultados */
     .prediction-section {
       display: none;
       transform: translateY(30px);
@@ -255,7 +235,7 @@
 
     .image-container {
       margin-bottom: 30px;
-      text-align: center; /* Centra el contenido */
+      text-align: center;
       width: 100%;
     }
 
@@ -270,7 +250,7 @@
       transition: all 0.5s ease;
       opacity: 0;
       transform: scale(0.8);
-      display: inline-block; /* Permite que text-align: center funcione */
+      display: inline-block;
     }
 
     .image-preview.loaded {
@@ -278,11 +258,12 @@
       transform: scale(1);
     }
 
+    /* Controles y botones */
     .controls {
       display: flex;
       gap: 20px;
       justify-content: center;
-      margin-bottom: 40px; /* Este margen se eliminará cuando se muestre el resultado */
+      margin-bottom: 40px; /* Este margen se elimina cuando se muestra el resultado */
       flex-wrap: wrap;
       transition: margin-bottom 0.3s ease;
     }
@@ -307,11 +288,11 @@
       gap: 8px;
       position: relative;
       overflow: hidden;
-      color: white; /* Añadir color blanco al texto */
+      color: white;
     }
 
     .btn::before {
-      display: none; /* Eliminamos el efecto del círculo */
+      display: none;
     }
 
     .btn-predict {
@@ -322,7 +303,7 @@
     .btn-predict:hover:not(:disabled) {
       transform: translateY(-3px);
       box-shadow: 0 12px 35px rgba(39, 174, 96, 0.4);
-      background: linear-gradient(135deg, #219a52, #27ae60); /* Oscurece el gradiente en hover */
+      background: linear-gradient(135deg, #219a52, #27ae60);
     }
 
     .btn-predict.predicting {
@@ -348,25 +329,25 @@
     .btn-clear:hover {
       transform: translateY(-3px);
       box-shadow: 0 12px 35px rgba(231, 76, 60, 0.4);
-      background: linear-gradient(135deg, #d44637, #b0351e); /* Oscurece el gradiente en hover */
+      background: linear-gradient(135deg, #d44637, #b0351e);
     }
 
     .btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none !important;
-      color: white; /* Mantener el color blanco incluso cuando está deshabilitado */
+      color: white;
     }
 
-    /* Resultados de predicción */
+    /* Resultados y predicciones */
     .results-container {
       display: none;
       transform: translateY(30px);
       width: 100%;
       padding: 20px 0;
       flex-direction: column;
-      margin-bottom: 20px;
-      padding-bottom: 20px; /* Espacio extra para el mensaje */
+      margin-top: 20px;
+      padding-bottom: 20px;
     }
 
     .results-container.show {
@@ -482,11 +463,10 @@
       color: #7f8c8d;
       text-align: center;
       margin-top: 15px;
-      font-style: italic;
       opacity: 0;
       transform: translateY(10px);
       transition: all 0.4s ease;
-      position: relative; /* Elimina cualquier posicionamiento absoluto */
+      position: relative;
       width: 100%;
       padding: 10px 20px;
       margin: 15px 0 0 0;
@@ -496,18 +476,53 @@
       opacity: 1;
       transform: translateY(0);
     }
+    
+    /* Sección de créditos del autor */
+    .author-section {
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      color: white;
+      padding: 30px 40px;
+      text-align: center;
+    }
 
-    /* Responsive */
+    .author-section .author-content {
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .author-section .author-title {
+      font-size: 1.3rem;
+      color: #bdc3c7;
+      font-weight: 500;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .author-section .author-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f1b726;
+      margin-bottom: 15px;
+    }
+
+    .author-section .tech-stack {
+      font-size: 0.9rem;
+      opacity: 0.75;
+      font-style: italic;
+    }
+
+    /* Responsive para tablets */
     @media (max-width: 768px) {
       .content {
-        --upload-height: 250px; /* Altura reducida para tablets */
+        --upload-height: 250px;
         --content-padding: 30px;
       }
     }
 
+    /* Responsive para móviles */
     @media (max-width: 480px) {
       .content {
-        --upload-height: 200px; /* Altura reducida para móviles */
+        --upload-height: 200px;
         --content-padding: 20px;
       }
 
@@ -538,6 +553,15 @@
 
       .probability {
         font-size: 1.5rem;
+      }
+
+      /* Sección de créditos del autor */
+      .author-section {
+        padding: 25px 20px;
+      }
+
+      .author-section .author-name {
+        font-size: 1.3rem;
       }
     }
 
@@ -678,6 +702,17 @@
             </div>
           </div>
           <div class="confidence-note" id="confidenceNote"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de créditos del autor -->
+    <div class="author-section">
+      <div class="author-content">
+        <div class="author-title">Desarrollado por</div>
+        <div class="author-name">👨‍💻 Raúl Alvarado García</div>
+        <div class="tech-stack">
+          Tecnologías usadas: TensorFlow, TensorFlow.js, HTML5, CSS y JavaScript
         </div>
       </div>
     </div>
@@ -877,13 +912,13 @@
             const maxProb = Math.max(dogProb, catProb);
             let confidenceText = '';
             if (maxProb > 0.9) {
-              confidenceText = '🎯 Predicción muy confiable';
+              confidenceText = '🎯 Confianza Muy Alta - Predicción muy confiable';
             } else if (maxProb > 0.7) {
-              confidenceText = '✅ Predicción confiable';
+              confidenceText = '✅ Confianza Alta - Predicción confiable';
             } else if (maxProb > 0.6) {
-              confidenceText = '⚖️ Predicción moderada';
+              confidenceText = '🤔 Confianza Media - Predicción moderada';
             } else {
-              confidenceText = '❓ Predicción incierta - la imagen podría ser ambigua';
+              confidenceText = '❓ Confianza Baja - Predicción poco confiable';
             }
             elements.confidenceNote.textContent = confidenceText;
             
@@ -971,7 +1006,6 @@
       elements.predictionSection.classList.remove('show');
       elements.resultsContainer.classList.remove('show');
       
-      // Reducido el tiempo de espera de 600ms a 300ms
       setTimeout(() => {
         elements.uploadSection.classList.remove('hiding');
         
@@ -984,7 +1018,7 @@
         elements.imagePreview.classList.remove('loaded');
         
         updatePredictButton();
-      }, 300); // Reducido de 600 a 300
+      }, 300);
 
       // Restaurar el margen de controls
       const controls = document.querySelector('.controls');
